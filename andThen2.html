@@ -2,7 +2,7 @@
 
 var client = {
     put: function (options, callback) {
-        return setTimeout(function() {callback('err', 'res')}, 1000);
+        return setTimeout(function() {callback('err', '{"body": "some body"}')}, 1000);
     }
 };
 
@@ -23,12 +23,22 @@ var AsyncChain = (function () {
         };
     }
     
-    function Link(link, lastLink, options) {        
+    function Link(callback, lastLink, options) {        
         var chain = function (context, asyncChain) {
             lastLink(context, function (previousResult, context) { 
+                
+                if (callback.asyncChain) {
+                    callback.then(function (result, options, context) {asyncChain(result, context)}).run(context);
+                    return {break:true}
+                }
+                
+                link = function (previousResult, context) {
+                    return callback(previousResult, options, context);
+                }
+                                
                 var result = link(previousResult, context);
                 
-                if (result !== undefined && result.err !== undefined) {
+                if (result !== undefined && result.break !== undefined) {
                     return result.err;
                 }
                 
@@ -50,16 +60,9 @@ var AsyncChain = (function () {
                 
                 lastLink(context);
             },
-            andThen: function (callback, options) {
+            then: function (callback, options) {
                 
-                if (callback.asyncChain) {
-                    console.log('woohoo');
-                }
-                else {console.log('oh');}
-                
-                return Link(function (previousResult, context) {
-                    return callback(previousResult, options, context);
-                }, lastLink, options);
+                return Link(callback, lastLink, options);
             },
             asyncChain: true
         };
@@ -68,44 +71,35 @@ var AsyncChain = (function () {
     return AsyncChain;
 })();
 
-var handleClientResponse = function (result, options, context) {
-    console.log('handling client response', result, options.hey, context);
-    context.val2 = 'val2';
-    return 1;
-};
-
-var printClientResponse = function (result, options, context) {
-    console.log('printing client response', result, options.smeg, context);
-};
-
-var getClientResponse = AsyncChain(function (options, asyncChain, context) {
-    console.log('getting client response', options.blah, context);
-    context.val = 'val';
+var getSomeData = AsyncChain(function (options, asyncChain, context) {
     client.put({}, asyncChain);
 });
 
-var getSecondResponse = AsyncChain(function (options, asyncChain, context) {
-    console.log('getting second client response', options.blah, context);
+var parseData = function (result, options, context) {
+    body = result[1];
+    context.body = JSON.parse(body).body
+};
+
+var getSomeMoreData = AsyncChain(function (options, asyncChain, context) {
     client.put({}, asyncChain);
-})().andThen(function(result, options, context) {
-    console.log('processing second response');
 });
 
-getClientResponse({blah: 'blah'})
-    .andThen(handleClientResponse, {hey: 'hey'})
-    .andThen(function (result, options, context) {
-        console.log('some other stuff', result, options, context);
-        context.val2 = 'val3';
-        return {err:5};
-    }, {ho: 'ho'})
-    .andThen(printClientResponse, {smeg: 'smeg'})
-    .run({start: 'start'});
+var parseMoreData = function(result, options, context) {
+    return 'some message'
+};
+
+var printResult = function (result, options, context) {
+    console.log(context.body, result);
+};
+
+var subApiCall = getSomeMoreData().then(parseMoreData); 
     
-// getClientResponse({blah: 'blah'})
-//     .andThen(handleClientResponse, {hey: 'hey'})
-//     .andThen(getSecondResponse)
-//     .andThen(printClientResponse, {smeg: 'smeg'})
-//     .run({start: 'start'});
+var apiCall = getSomeData({blah: 'blah'})
+    .then(parseData, {hey: 'hey'})
+    .then(subApiCall)
+    .then(printResult, {smeg: 'smeg'})
+
+apiCall.run({start: 'start'});
     
 console.log('Its Asynchronous!');
 
