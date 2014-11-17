@@ -29,7 +29,7 @@ var AsyncChain = (function () {
                 
                 if (callback.asyncChain) {
                     callback.then(function (result, options, context) {asyncChain(result, context)}).run(context);
-                    return {break:true}
+                    return {break:true};
                 }
                 
                 link = function (previousResult, context) {
@@ -39,7 +39,7 @@ var AsyncChain = (function () {
                 var result = link(previousResult, context);
                 
                 if (result !== undefined && result.break !== undefined) {
-                    return result.err;
+                    return result.break;
                 }
                 
                 if (asyncChain !== undefined) {
@@ -61,7 +61,6 @@ var AsyncChain = (function () {
                 lastLink(context);
             },
             then: function (callback, options) {
-                
                 return Link(callback, lastLink, options);
             },
             asyncChain: true
@@ -85,18 +84,22 @@ var getSomeMoreData = AsyncChain(function (options, asyncChain, context) {
 });
 
 var parseMoreData = function(result, options, context) {
-    return 'some message'
+    context.message = 'some message';
 };
 
 var printResult = function (result, options, context) {
-    console.log(context.body, result);
+    console.log(context.body, context.message, context.anotherMessage);
+    console.log(context);
 };
 
-var subApiCall = getSomeMoreData().then(parseMoreData); 
+var subApiCall = getSomeMoreData().then(parseMoreData);
+
+var subSubApiCall = getSomeMoreData().then(function (result, options, context) {context.anotherMessage = 'another message';});
     
 var apiCall = getSomeData({blah: 'blah'})
     .then(parseData, {hey: 'hey'})
     .then(subApiCall)
+    .then(subSubApiCall)
     .then(printResult, {smeg: 'smeg'})
 
 apiCall.run({start: 'start'});
