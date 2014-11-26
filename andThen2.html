@@ -7,11 +7,9 @@ var client = {
 };
 
 var AsyncChain = (function () {
-    function AsyncChain(callback) {
-        var context = {};
-        
+    function AsyncChain(callback) {        
         return function (options) {
-            var chain = function (context, asyncChain) {
+            var firstLink = function (context, asyncChain) {
                 callback(options, function () {
                     if (asyncChain !== undefined) {
                         asyncChain(arguments, context);
@@ -19,24 +17,19 @@ var AsyncChain = (function () {
                 }, context);
             };
         
-            return linkResult(chain);
+            return addControls(firstLink);
         };
     }
     
-    function Link(callback, lastLink, options) {        
-        var chain = function (context, asyncChain) {
-            lastLink(context, function (previousResult, context) { 
-                
-                if (callback.asyncChain) {
-                    callback.then(function (result, options, context) {asyncChain(result, context)}).run(context);
-                    return {break:true};
-                }
-                
-                link = function (previousResult, context) {
-                    return callback(previousResult, options, context);
+    function extendChain(link, previousLinks, options) {        
+        return function (context, asyncChain) {
+            previousLinks(context, function (previousResult, context) { 
+                if (link.asyncChain) {
+                    link.then(function (result, options, context) {asyncChain(result, context)}).run(context);
+                    return { break: true };
                 }
                                 
-                var result = link(previousResult, context);
+                var result = link(previousResult, options, context);
                 
                 if (result !== undefined && result.break !== undefined) {
                     return result.break;
@@ -47,21 +40,20 @@ var AsyncChain = (function () {
                 }
             });
         };
-        
-        return linkResult(chain);
     }
     
-    function linkResult(lastLink) {
+    function addControls(previousLinks) {
         return {
             run: function (context) {
                 if (context === undefined) {
                     context = {};
                 }
                 
-                lastLink(context);
+                previousLinks(context);
             },
             then: function (callback, options) {
-                return Link(callback, lastLink, options);
+                var newChain = extendChain(callback, previousLinks, options);
+                return addControls(newChain);
             },
             asyncChain: true
         };
