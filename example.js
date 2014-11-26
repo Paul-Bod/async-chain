@@ -12,15 +12,17 @@ function handleGetPetResponse (err, res, personName) {
     else {
         render('My name is ' + personName);
     }
-    
+}
+
+function getPet(id) {
+    client.getPet(id, function (err, res) {
+        handleGetPetResponse(err, res, person.name)
+    });
 }
 
 function handleGetPersonResponse(err, res) {
     var person = JSON.parse(res).body;
-    
-    client.getPet(person.pets, function (err, res) {
-        handleGetPetResponse(err, res, person.name)
-    });
+    getPet(person.pets);
 }
 
 function person(id) {

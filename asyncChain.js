@@ -15,7 +15,7 @@ var AsyncChain = (function () {
     
     function extendChain(link, previousLinks, options) {        
         return function (context, asyncChain) {
-            previousLinks(context, function (previousResult, context) { 
+            previousLinks(context, function (previousResult, context) {
                 if (link.asyncChain !== undefined) {
                     var remainingChain = function (result, options, context) {
                         if (asyncChain !== undefined) {

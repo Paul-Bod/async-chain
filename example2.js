@@ -11,8 +11,7 @@ function handleGetPetResponse (result, options, context) {
     }
     else {
         return 'My name is ' + context.personName;
-    }
-    
+    }  
 }
 
 var getPet = AsyncChain(function (options, asyncChain, context) {
@@ -31,10 +30,9 @@ var getPerson = AsyncChain(function (options, asyncChain, context) {
     client.getPerson(options.id, asyncChain);
 });
 
-var pets = getPet().then(handleGetPetResponse);
-
 getPerson({id: 5})
     .then(handleGetPersonResponse)
-    .then(pets)
+    .then(getPet())
+    .then(handleGetPetResponse)
     .then(render)
     .run();
