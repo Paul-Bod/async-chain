@@ -1,10 +1,10 @@
 var AsyncChain = (function () {
     function AsyncChain(callback) {        
         return function (options) {
-            var firstLink = function (context, asyncChain) {
+            var firstLink = function (context, nextLink) {
                 callback(options, function () {
-                    if (asyncChain !== undefined) {
-                        asyncChain(arguments, context);
+                    if (nextLink !== undefined) {
+                        nextLink(arguments, context);
                     }
                 }, context);
             };
@@ -13,27 +13,43 @@ var AsyncChain = (function () {
         };
     }
     
+    function linkStartsNewChain(link) {
+        return link.asyncChain !== undefined;
+    }
+    
+    function resultBreaksChain(result) {
+        return result !== undefined && result.break !== undefined;
+    }
+    
+    function chainContinues(nextLink) {
+        return nextLink !== undefined;
+    }
+    
+    function runNewChain(link, nextLink, context) {
+        var finishPreviousChain = function (result, options, context) {
+            if (nextLink !== undefined) {
+                nextLink(result, context);
+            }
+        };
+        link.then(finishPreviousChain).run(context);
+    }
+    
     function extendChain(link, previousLinks, options) {        
-        return function (context, asyncChain) {
+        return function (context, nextLink) {
             previousLinks(context, function (previousResult, context) {
-                if (link.asyncChain !== undefined) {
-                    var remainingChain = function (result, options, context) {
-                        if (asyncChain !== undefined) {
-                            asyncChain(result, context);
-                        }
-                    };
-                    link.then(remainingChain).run(context);
-                    return { break: true };
+                if (linkStartsNewChain(link)) {
+                    runNewChain(link, nextLink, context);
                 }
-                                
-                var result = link(previousResult, options, context);
-                
-                if (result !== undefined && result.break !== undefined) {
-                    return result.break;
-                }
-                
-                if (asyncChain !== undefined) {
-                    asyncChain(result, context);
+                else {                
+                    var result = link(previousResult, options, context);
+                    
+                    if (resultBreaksChain(result)) {
+                        return result.break;
+                    }
+                    
+                    if (chainContinues(nextLink)) {
+                        nextLink(result, context);
+                    }
                 }
             });
         };
