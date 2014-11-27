@@ -3,7 +3,12 @@ function render(result, options, context) {
 }
 
 function handleGetPetResponse (result, options, context) {
-    var response = JSON.parse(result[1]);
+    var response = JSON.parse(result[1]),
+        err = result[0];
+    
+    if (err) {
+        return next('error retrieving pet')
+    }
     
     if (response.status === 200) {
         var pet = response.body;
@@ -36,7 +41,7 @@ var getPerson = AsyncChain(function (options, asyncChain, context) {
     client.getPerson(options.id, asyncChain);
 });
 
-function error(message) {
+function errorHandler(message) {
     render(message);
 }
 
@@ -45,4 +50,4 @@ getPerson({id: 5})
     .then(getPet())
     .then(handleGetPetResponse)
     .then(render)
-    .run({next: error});
+    .run({next: errorHandler});
