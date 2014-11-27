@@ -13,8 +13,12 @@ var AsyncChain = (function () {
         };
     }
     
+    function linkProvided(link) {
+        return link !== undefined
+    }
+    
     function linkStartsNewChain(link) {
-        return link.asyncChain !== undefined;
+        return linkProvided(link) && link.asyncChain !== undefined;
     }
     
     function resultBreaksChain(result) {
@@ -40,11 +44,14 @@ var AsyncChain = (function () {
                 if (linkStartsNewChain(link)) {
                     runNewChain(link, nextLink, context);
                 }
-                else {                
-                    var result = link(previousResult, options, context);
-                    
-                    if (resultBreaksChain(result)) {
-                        return result.break;
+                else {           
+                    var result = [];
+                    if (linkProvided(link)) {     
+                        result = link(previousResult, options, context);
+                        
+                        if (resultBreaksChain(result)) {
+                            return result.break;
+                        }
                     }
                     
                     if (chainContinues(nextLink)) {
