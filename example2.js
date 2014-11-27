@@ -7,7 +7,7 @@ function handleGetPetResponse (result, options, context) {
         err = result[0];
     
     if (err) {
-        return next('error retrieving pet')
+        return {break: context.next('error retrieving pet')};
     }
     
     if (response.status === 200) {
