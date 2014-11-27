@@ -22,7 +22,7 @@ var AsyncChain = (function () {
     }
     
     function resultBreaksChain(result) {
-        return result !== undefined && result.break !== undefined;
+        return result !== undefined && result.hasOwnProperty('break');
     }
     
     function chainContinues(nextLink) {
@@ -44,7 +44,7 @@ var AsyncChain = (function () {
                 if (linkStartsNewChain(link)) {
                     runNewChain(link, nextLink, context);
                 }
-                else {           
+                else {
                     var result = [];
                     if (linkProvided(link)) {     
                         result = link(previousResult, options, context);
