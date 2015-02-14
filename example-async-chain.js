@@ -1,10 +1,13 @@
-function render(result, options, context) {
-    document.getElementById('example').innerHTML = result;
+function render(message) {
+    document.getElementById('example').innerHTML = message;
 }
 
-function handleGetPetResponse (result, options, context) {
-    var response = JSON.parse(result[1]),
-        err = result[0];
+function handleGetPetResponse (err, result, context) {
+    
+    console.log("handleGetPetResponse", err, result, context);
+    
+    
+    var response = JSON.parse(result);
     
     if (err) {
         return {break: context.next('error retrieving pet')};
@@ -19,13 +22,17 @@ function handleGetPetResponse (result, options, context) {
     }  
 }
 
-var getPet = AsyncChain(function (options, asyncChain, context) {
-    client.getPet(context.pets, asyncChain);
+var getPet = AsyncChain(function (pets, callback) {
+    console.log('getPet', arguments);
+    
+    client.getPet(pets, callback);
 });
 
-function handleGetPersonResponse(result, options, context) {
-    var response = JSON.parse(result[1]),
-        err = result[0];
+function handleGetPersonResponse(err, result, context) {
+    
+    console.log(err, result, context);
+    
+    var response = JSON.parse(result);
     
     if (err || response.status !== 200) {
         return {break: context.next('error retrieving person')};
@@ -34,20 +41,22 @@ function handleGetPersonResponse(result, options, context) {
     var person = response.body;
     
     context.personName = person.name;
-    context.pets = person.pets;
+    return person.pets;
 }
 
-var getPerson = AsyncChain(function (options, asyncChain, context) {
-    client.getPerson(options.id, asyncChain);
+var getPerson = AsyncChain(function (id, blah, callback) {
+    
+    console.log('blah', blah);
+    client.getPerson(id, callback);
 });
 
 function errorHandler(message) {
     render(message);
 }
 
-getPerson({id: 5})
+getPerson(5, 6)
     .then(handleGetPersonResponse)
-    .then(getPet())
+    .then(getPet)
     .then(handleGetPetResponse)
     .then(render)
     .run({next: errorHandler});
