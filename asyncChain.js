@@ -1,25 +1,16 @@
 var AsyncChain = (function () {
     function AsyncChain(callback) {        
         var asynChain = function () {
-            var callbackArgs = [];
-            for(var i=0; i<arguments.length; i++) {
-                callbackArgs.push(arguments[i])
-            }            
+            var callbackArgs = argumentsToArray(arguments);
             var firstLink = function (context, nextLink) {
                 callbackArgs.push(function () {
                     if (nextLink !== undefined) {
-                        var args = [];
-                        for(var i=0; i<arguments.length; i++) {
-                            args.push(arguments[i])
-                        }
+                        var args = argumentsToArray(arguments);
                         args.splice(args.length, 0, context);
-                    
-                        console.log('firstlink', args);
                         nextLink.apply(null, args);
                     }
                 });
                 callbackArgs.push(context);
-                console.log('callbackArgs', callbackArgs);
                 callback.apply(null, callbackArgs);
             };
         
@@ -27,6 +18,14 @@ var AsyncChain = (function () {
         };
         asynChain.prototype.asyncChain = true;
         return asynChain
+    }
+    
+    function argumentsToArray(args) {
+        var argsArr = [];
+        for(var i=0; i<args.length; i++) {
+            argsArr.push(args[i])
+        }
+        return argsArr;
     }
     
     function linkProvided(link) {
@@ -46,10 +45,7 @@ var AsyncChain = (function () {
     }
     
     function runNewChain(previousResult, link, nextLink, context) {
-        console.log('new chain');
         var finishPreviousChain = function (result, context) {
-            console.log(result);
-            
             if (nextLink !== undefined) {
                 nextLink.apply(null, arguments);
             }
@@ -60,22 +56,15 @@ var AsyncChain = (function () {
     function extendChain(link, previousLinks) {        
         return function (context, nextLink) {
             previousLinks(context, function () {
-                
                 var previousResult = arguments[0];
                 var context = arguments[arguments.length-1];
-                console.log('currentLink', arguments);
                 
                 if (linkStartsNewChain(link)) {
                     runNewChain(previousResult, link, nextLink, context);
                 }
                 else {
                     var result = [];
-                    if (linkProvided(link)) {
-                        
-                        // options.splice(0,0,previousResult);
-                        // options.splice(options.length,0,context);
-                        // console.log(options);
-                        
+                    if (linkProvided(link)) {                        
                         result = link.apply(null, arguments);
                         
                         if (resultBreaksChain(result)) {
@@ -84,8 +73,11 @@ var AsyncChain = (function () {
                     }
                     
                     if (chainContinues(nextLink)) {
-                        var args = [result, context];
-                        console.log('nextLinks', args);
+                        var args = [];
+                        if (result !== undefined) {
+                            args.push(result);
+                        }
+                        args.push(context);
                         nextLink.apply(null, args);
                     }
                 }
@@ -103,16 +95,9 @@ var AsyncChain = (function () {
                 previousLinks(context);
             },
             then: function (callback) {
-                // var callback = arguments[0];
-                // var options = [];
-                // for(var i=1; i<arguments.length; i++) {
-                //     options.push(arguments[i])
-                // }
-                
                 var newChain = extendChain(callback, previousLinks);
                 return addControls(newChain);
-            },
-            asyncChain: true
+            }
         };
     }
     
