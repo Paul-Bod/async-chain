@@ -149,4 +149,106 @@ describe('AsyncChain with context', function () {
         };
         async().then(linkOne).then(linkTwo).run({context: true});
     });
-})
+});
+
+describe('AysncChain composure', function () {
+    it('allows two empty chains to be composed together', function () {
+        var ranSuccessfullyOne = false;
+        var ranSuccessfullyTwo = false;
+        
+        var asyncOne = AsyncChain(function (callback, context) {
+            ranSuccessfullyOne = true;
+            callback();
+        });
+        
+        var asyncTwo = AsyncChain(function (callback, context) {
+            ranSuccessfullyTwo = true;
+        });
+        
+        asyncOne().then(asyncTwo).run();
+        expect(ranSuccessfullyOne).toEqual(true);
+        expect(ranSuccessfullyTwo).toEqual(true);
+    });
+    
+    it('allows a chain to be composed with an empty chain', function () {
+        var ranSuccessfullyOne = false;
+        var ranSuccessfullyTwo = false;
+        var ranSuccessfullyThree = false;
+        
+        var asyncOne = AsyncChain(function (callback, context) {
+            ranSuccessfullyOne = true;
+            callback();
+        });
+        
+        var asyncTwo = AsyncChain(function (callback, context) {
+            ranSuccessfullyThree = true;
+        });
+        
+        asyncOne().then(function () {
+            ranSuccessfullyTwo = true;
+        }).then(asyncTwo).run();
+        
+        expect(ranSuccessfullyOne).toEqual(true, 'start of first chain was not called');
+        expect(ranSuccessfullyTwo).toEqual(true, 'link was not called');
+        expect(ranSuccessfullyThree).toEqual(true, 'empty chain was not called');
+    });
+    
+    it('allows a chain to carry on after composure with an empty chain', function () {
+        var ranSuccessfullyOne = false;
+        var ranSuccessfullyTwo = false;
+        var ranSuccessfullyThree = false;
+        var ranSuccessfullyFour = false;
+        
+        var asyncOne = AsyncChain(function (callback, context) {
+            ranSuccessfullyOne = true;
+            callback();
+        });
+        
+        var asyncTwo = AsyncChain(function (callback, context) {
+            ranSuccessfullyThree = true;
+            callback();
+        });
+        
+        asyncOne()
+            .then(function () {
+                ranSuccessfullyTwo = true;
+            })
+            .then(asyncTwo)
+            .then(function () {
+                ranSuccessfullyFour = true;
+            }).run();
+        
+        expect(ranSuccessfullyOne).toEqual(true, 'start of first chain was not called');
+        expect(ranSuccessfullyTwo).toEqual(true, 'link was not called');
+        expect(ranSuccessfullyThree).toEqual(true, 'empty chain was not called');
+        expect(ranSuccessfullyFour).toEqual(true, 'continued chain was not called');
+    });
+    
+    it('allows two chains to be composed together', function () {
+        var ranSuccessfullyOne = false;
+        var ranSuccessfullyTwo = false;
+        var ranSuccessfullyThree = false;
+        var ranSuccessfullyFour = false;
+        
+        var asyncOne = AsyncChain(function (callback, context) {
+            ranSuccessfullyOne = true;
+            callback();
+        })().then(function () {
+                ranSuccessfullyTwo = true;
+            });
+        
+        var asyncTwo = AsyncChain(function (callback, context) {
+            ranSuccessfullyThree = true;
+            callback();
+        })().then(function () {
+                ranSuccessfullyFour = true;
+            });
+        
+        asyncOne.then(asyncTwo).run();
+        
+        expect(ranSuccessfullyOne).toEqual(true, 'start of first chain was not called');
+        expect(ranSuccessfullyTwo).toEqual(true, 'first chain link was not called');
+        expect(ranSuccessfullyThree).toEqual(true, 'start of second chain was not called');
+        expect(ranSuccessfullyFour).toEqual(true, 'second chain link was not called');
+    });
+});

@@ -32,8 +32,17 @@ var AsyncChain = (function () {
         return link !== undefined
     }
     
+    function hasEmptyChain(link) {
+        return typeof link === 'function';
+    }
+    
     function linkStartsNewChain(link) {
-        return linkProvided(link) && link.prototype.asyncChain !== undefined;
+        if (hasEmptyChain(link)) {
+            return linkProvided(link) && link.prototype.asyncChain !== undefined;
+        }
+        else {
+            return linkProvided(link) && link.asyncChain !== undefined;
+        }
     }
     
     function resultBreaksChain(result) {
@@ -50,14 +59,27 @@ var AsyncChain = (function () {
                 nextLink.apply(null, arguments);
             }
         };
-        link(previousResult).then(finishPreviousChain).run(context);
+        
+        var start = link
+        if (hasEmptyChain(link)) {
+            var args = []
+            if (previousResult !== null) {
+                args.push(previousResult);
+            }
+            var start = link.apply(null, args)
+        }
+        start.then(finishPreviousChain).run(context);
     }
     
     function extendChain(link, previousLinks) {        
         return function (context, nextLink) {
             previousLinks(context, function () {
-                var previousResult = arguments[0];
-                var context = arguments[arguments.length-1];
+                var previousResult = null;
+                var context = arguments[0];
+                if (arguments.length > 1) {
+                    var previousResult = arguments[0];
+                    var context = arguments[1];
+                }
                 
                 if (linkStartsNewChain(link)) {
                     runNewChain(previousResult, link, nextLink, context);
@@ -97,7 +119,8 @@ var AsyncChain = (function () {
             then: function (callback) {
                 var newChain = extendChain(callback, previousLinks);
                 return addControls(newChain);
-            }
+            },
+            asyncChain: true
         };
     }
     
